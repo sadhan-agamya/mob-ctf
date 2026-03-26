@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CTF Platform{% endblock %} | Mobile Pentesting CTF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-inner">
+            <a href="{{ url_for('home') }}" class="brand">CTF Platform</a>
+
+            <div class="nav-links">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+                        <a href="{{ url_for('manage_challenge') }}">Manage Challenge</a>
+                        <a href="{{ url_for('admin_users') }}">Users</a>
+                        <a href="{{ url_for('admin_logs') }}">Logs</a>
+                    {% else %}
+                        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a href="{{ url_for('leaderboard') }}">Leaderboard</a>
+                        <a href="{{ url_for('my_results') }}">My Results</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="nav-btn">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('home') }}">Home</a>
+                    <a href="{{ url_for('login') }}">Login</a>
+                    <a href="{{ url_for('register') }}" class="nav-btn">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container" id="mainContent">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-wrap" id="flashWrap">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}" data-category="{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Warning popup -->
+    <div id="warningPopup" class="warning-popup hidden">
+        <div class="warning-popup-inner">
+            <span class="warning-icon">⚠</span>
+            <span id="warningText">Wrong flag. Try again.</span>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const flashes = document.querySelectorAll(".flash[data-category]");
+        const mainContent = document.getElementById("mainContent");
+        const warningPopup = document.getElementById("warningPopup");
+        const warningText = document.getElementById("warningText");
+
+        function launchConfetti() {
+            const count = 140;
+            const colors = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+
+            for (let i = 0; i < count; i++) {
+                const confetti = document.createElement("div");
+                confetti.className = "confetti-piece";
+                confetti.style.left = Math.random() * 100 + "vw";
+                confetti.style.top = "-20px";
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confetti.style.animationDuration = (2 + Math.random() * 2) + "s";
+                confetti.style.opacity = 1;
+                confetti.style.width = (6 + Math.random() * 8) + "px";
+                confetti.style.height = (10 + Math.random() * 14) + "px";
+                document.body.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 4500);
+            }
+        }
+
+        function showWarning(message) {
+            if (!warningPopup || !warningText) return;
+            warningText.textContent = message || "Something went wrong.";
+            warningPopup.classList.remove("hidden");
+            warningPopup.classList.add("show");
+
+            if (mainContent) {
+                mainContent.classList.remove("shake");
+                void mainContent.offsetWidth;
+                mainContent.classList.add("shake");
+            }
+
+            setTimeout(() => {
+                warningPopup.classList.remove("show");
+                setTimeout(() => warningPopup.classList.add("hidden"), 250);
+            }, 2200);
+        }
+
+        flashes.forEach(flash => {
+            const category = flash.dataset.category || "";
+            const text = flash.textContent.trim().toLowerCase();
+
+            if (category === "success") {
+                if (text.includes("correct") || text.includes("completed")) {
+                    launchConfetti();
+                }
+            }
+
+            if (category === "danger" || category === "warning") {
+                showWarning(flash.textContent.trim());
+            }
+        });
+    });
+    </script>
+</body>
+</html>

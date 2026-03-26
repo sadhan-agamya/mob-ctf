@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Manage Users</h1>
+    <p>View user progress and reset their challenge session.</p>
+</div>
+
+<div class="card">
+    <div class="card-header-row">
+        <div>
+            <h2>Registered Users</h2>
+            <p class="muted">All non-admin users are listed below.</p>
+        </div>
+        <div class="right-actions">
+            <a href="{{ url_for('export_csv', export_type='users') }}" class="btn btn-primary">Export Users CSV</a>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Score</th>
+                    <th>Completed Stages</th>
+                    <th>Registered</th>
+                    <th>Reset</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.total_score }}</td>
+                    <td>{{ user.completed_stages }}</td>
+                    <td>{{ user.registered_at }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('reset_user_session', user_id=user.id) }}" onsubmit="return confirm('Reset this user session?');">
+                            <button type="submit" class="btn btn-danger">Reset Session</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

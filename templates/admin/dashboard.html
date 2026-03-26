@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Admin Dashboard</h1>
+    <p>Manage challenges, users, submissions, exports, and rankings.</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Total Users</h3>
+        <p>{{ total_users }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Total Logs</h3>
+        <p>{{ total_logs }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Started Sessions</h3>
+        <p>{{ started_sessions }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Completed Sessions</h3>
+        <p>{{ completed_sessions }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header-row">
+        <div>
+            <h2>Active Challenge</h2>
+            {% if active_challenge %}
+                <p class="muted">Currently active challenge setup</p>
+            {% else %}
+                <p class="muted">No active challenge right now</p>
+            {% endif %}
+        </div>
+        <div class="right-actions">
+            <a href="{{ url_for('manage_challenge') }}" class="btn btn-primary">Manage Challenge</a>
+        </div>
+    </div>
+
+    {% if active_challenge %}
+        <div class="meta-grid">
+            <div class="meta-box">
+                <span class="meta-label">Title</span>
+                <span class="meta-value">{{ active_challenge.title }}</span>
+            </div>
+            <div class="meta-box">
+                <span class="meta-label">Duration</span>
+                <span class="meta-value">{{ active_challenge.duration_minutes }} mins</span>
+            </div>
+            <div class="meta-box">
+                <span class="meta-label">APK Link</span>
+                <span class="meta-value">
+                    {% if active_challenge.apk_drive_link %}
+                        <a href="{{ active_challenge.apk_drive_link }}" target="_blank">Open Link</a>
+                    {% else %}
+                        Not added
+                    {% endif %}
+                </span>
+            </div>
+            <div class="meta-box">
+                <span class="meta-label">Status</span>
+                <span class="meta-value">
+                    {% if active_challenge.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="quick-actions-grid">
+    <a href="{{ url_for('manage_challenge') }}" class="quick-card">
+        <h3>Challenge Setup</h3>
+        <p>Update title, APK link, timer, and all 9 stages.</p>
+    </a>
+
+    <a href="{{ url_for('admin_users') }}" class="quick-card">
+        <h3>User Management</h3>
+        <p>View users, scores, and reset sessions.</p>
+    </a>
+
+    <a href="{{ url_for('admin_logs') }}" class="quick-card">
+        <h3>Submission Logs</h3>
+        <p>Track each submission with stage and result.</p>
+    </a>
+
+    <a href="{{ url_for('export_csv', export_type='leaderboard') }}" class="quick-card">
+        <h3>Export Leaderboard</h3>
+        <p>Download current ranking in CSV format.</p>
+    </a>
+
+    <a href="{{ url_for('export_csv', export_type='users') }}" class="quick-card">
+        <h3>Export Users</h3>
+        <p>Download all registered users in CSV format.</p>
+    </a>
+
+    <a href="{{ url_for('export_csv', export_type='logs') }}" class="quick-card">
+        <h3>Export Logs</h3>
+        <p>Download all submission logs in CSV format.</p>
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header-row">
+        <div>
+            <h2>Leaderboard</h2>
+            <p class="muted">Top ranked users by score and completed stages.</p>
+        </div>
+        <div class="right-actions">
+            <a href="{{ url_for('leaderboard') }}" class="btn btn-primary">Open Full Leaderboard</a>
+        </div>
+    </div>
+
+    <div class="leaderboard-toolbar">
+        <div class="leaderboard-search-wrap">
+            <input
+                type="text"
+                id="leaderboardSearch"
+                class="form-control"
+                placeholder="Search by username"
+                value="{{ username_query or '' }}"
+            >
+        </div>
+        <div class="right-actions">
+            <button type="button" id="refreshLeaderboardBtn" class="btn btn-success">Refresh</button>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Medal</th>
+                    <th>Username</th>
+                    <th>Score</th>
+                    <th>Completed Stages</th>
+                    <th>Registered</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                {% if leaderboard_users %}
+                    {% for user in leaderboard_users %}
+                    <tr class="{% if loop.index == 1 %}leader-gold{% elif loop.index == 2 %}leader-silver{% elif loop.index == 3 %}leader-bronze{% endif %}">
+                        <td>#{{ loop.index }}</td>
+                        <td>
+                            {% if loop.index == 1 %}
+                                <span class="medal medal-gold">🥇</span>
+                            {% elif loop.index == 2 %}
+                                <span class="medal medal-silver">🥈</span>
+                            {% elif loop.index == 3 %}
+                                <span class="medal medal-bronze">🥉</span>
+                            {% else %}
+                                <span class="medal medal-none">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.total_score }}</td>
+                        <td>{{ user.completed_stages }}/9</td>
+                        <td>{{ user.registered_at }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6">No leaderboard data available yet.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <p class="muted leaderboard-live-note" id="leaderboardStatusText">Live refresh enabled.</p>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <h2>Recent Users</h2>
+        {% if recent_users %}
+            <div class="table-wrap">
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Score</th>
+                            <th>Stages</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in recent_users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.total_score }}</td>
+                            <td>{{ user.completed_stages }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No users yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Recent Submission Logs</h2>
+        {% if recent_logs %}
+            <div class="table-wrap">
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Stage</th>
+                            <th>Result</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.user_id }}</td>
+                            <td>{{ log.stage_number }}</td>
+                            <td>
+                                {% if log.is_correct %}
+                                    <span class="badge badge-success">Correct</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Wrong</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.submitted_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No logs yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const leaderboardBody = document.getElementById("leaderboardBody");
+    const searchInput = document.getElementById("leaderboardSearch");
+    const refreshBtn = document.getElementById("refreshLeaderboardBtn");
+    const statusText = document.getElementById("leaderboardStatusText");
+
+    let refreshTimer = null;
+    let searchDebounce = null;
+
+    function getMedal(rank) {
+        if (rank === 1) return '<span class="medal medal-gold">🥇</span>';
+        if (rank === 2) return '<span class="medal medal-silver">🥈</span>';
+        if (rank === 3) return '<span class="medal medal-bronze">🥉</span>';
+        return '<span class="medal medal-none">—</span>';
+    }
+
+    function getRowClass(rank) {
+        if (rank === 1) return 'leader-gold';
+        if (rank === 2) return 'leader-silver';
+        if (rank === 3) return 'leader-bronze';
+        return '';
+    }
+
+    function renderLeaderboard(users) {
+        if (!leaderboardBody) return;
+
+        if (!users || users.length === 0) {
+            leaderboardBody.innerHTML = `
+                <tr>
+                    <td colspan="6">No leaderboard data available yet.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        leaderboardBody.innerHTML = users.map(user => `
+            <tr class="${getRowClass(user.rank)}">
+                <td>#${user.rank}</td>
+                <td>${getMedal(user.rank)}</td>
+                <td>${user.username}</td>
+                <td>${user.score}</td>
+                <td>${user.completed_stages}/9</td>
+                <td>${user.registered_at}</td>
+            </tr>
+        `).join("");
+    }
+
+    async function loadLeaderboard(showStatus = true) {
+        try {
+            const username = searchInput ? searchInput.value.trim() : "";
+            const query = username ? `?username=${encodeURIComponent(username)}` : "";
+            const response = await fetch(`/admin/leaderboard-data${query}`, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            const data = await response.json();
+            renderLeaderboard(data.users || []);
+
+            if (showStatus && statusText) {
+                statusText.textContent = `Leaderboard refreshed at ${new Date().toLocaleTimeString()}`;
+            }
+        } catch (error) {
+            if (statusText) {
+                statusText.textContent = "Failed to refresh leaderboard.";
+            }
+        }
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", function () {
+            loadLeaderboard(true);
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener("input", function () {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                loadLeaderboard(true);
+            }, 350);
+        });
+    }
+
+    refreshTimer = setInterval(() => {
+        loadLeaderboard(false);
+    }, 8000);
+});
+</script>
+{% endblock %}

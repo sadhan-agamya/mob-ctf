@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Manage Challenge{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Manage Challenge</h1>
+    <p>Configure the active challenge, APK link, timer, and all 9 stages.</p>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-grid">
+            <div class="full-span">
+                <label>Challenge Title</label>
+                <input type="text" name="title" class="form-control" value="{{ challenge.title if challenge else '' }}" required>
+            </div>
+
+            <div class="full-span">
+                <label>Description</label>
+                <textarea name="description" class="form-control form-textarea" placeholder="Enter challenge description">{{ challenge.description if challenge else '' }}</textarea>
+            </div>
+
+            <div class="full-span">
+                <label>Google Drive APK Link</label>
+                <input type="url" name="apk_drive_link" class="form-control" value="{{ challenge.apk_drive_link if challenge else '' }}" placeholder="https://drive.google.com/...">
+            </div>
+
+            <div>
+                <label>Duration (Minutes)</label>
+                <input type="number" name="duration_minutes" class="form-control" value="{{ challenge.duration_minutes if challenge else 120 }}" min="1" required>
+            </div>
+
+            <div class="checkbox-wrap">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_active" {% if challenge and challenge.is_active %}checked{% endif %}>
+                    Set as Active Challenge
+                </label>
+            </div>
+        </div>
+
+        <div class="card section-card">
+            <h2>Stage Configuration</h2>
+            <p class="muted">Add flags, points, and hints for all 9 stages.</p>
+
+            <div class="table-wrap">
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>Stage</th>
+                            <th>Flag</th>
+                            <th>Points</th>
+                            <th>Hint</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in range(1, 10) %}
+                        <tr>
+                            <td><strong>Stage {{ i }}</strong></td>
+                            <td>
+                                <input
+                                    type="text"
+                                    name="flag_{{ i }}"
+                                    class="form-control"
+                                    value="{{ stages[i].flag if i in stages else '' }}"
+                                    placeholder="Enter flag for stage {{ i }}"
+                                    required
+                                >
+                            </td>
+                            <td>
+                                <input
+                                    type="number"
+                                    name="points_{{ i }}"
+                                    class="form-control"
+                                    value="{{ stages[i].points if i in stages else 100 }}"
+                                    min="0"
+                                    required
+                                >
+                            </td>
+                            <td>
+                                <input
+                                    type="text"
+                                    name="hint_{{ i }}"
+                                    class="form-control"
+                                    value="{{ stages[i].hint if i in stages else '' }}"
+                                    placeholder="Optional hint"
+                                >
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="right-actions top-gap">
+            <button type="submit" class="btn btn-success">Save Challenge Setup</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

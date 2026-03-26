@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}My Results{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>My Results</h1>
+    <p>See your challenge progress and submission history.</p>
+</div>
+
+{% if challenge and session_obj %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Challenge</h3>
+        <p>{{ challenge.title }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Score</h3>
+        <p>{{ session_obj.score }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Current Stage</h3>
+        <p>{{ session_obj.current_stage }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Status</h3>
+        <p>{% if session_obj.is_completed %}Completed{% else %}In Progress{% endif %}</p>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Submission History</h2>
+    <div class="table-wrap">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Submitted Flag</th>
+                    <th>Result</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.stage_number }}</td>
+                    <td>{{ log.submitted_flag }}</td>
+                    <td>
+                        {% if log.is_correct %}
+                            <span class="badge badge-success">Correct</span>
+                        {% else %}
+                            <span class="badge badge-danger">Wrong</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.submitted_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No submissions yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

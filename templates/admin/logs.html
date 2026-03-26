@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Submission Logs{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <h2 class="fw-bold mb-4">Submission Logs</h2>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Stage</th>
+                        <th>Submitted Flag</th>
+                        <th>Result</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submission, user, flag in logs %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ flag.stage_name }}</td>
+                        <td><code>{{ submission.submitted_flag }}</code></td>
+                        <td>
+                            {% if submission.is_correct %}
+                                <span class="badge bg-success">Correct</span>
+                            {% else %}
+                                <span class="badge bg-danger">Wrong</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ submission.submitted_at }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted">No logs available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

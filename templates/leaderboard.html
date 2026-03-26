@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Leaderboard</h1>
+    <p>Top users ranked by score and progress.</p>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Username</th>
+                    <th>Score</th>
+                    <th>Completed Stages</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>#{{ loop.index }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.total_score }}</td>
+                    <td>{{ user.completed_stages }}/9</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No leaderboard data yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

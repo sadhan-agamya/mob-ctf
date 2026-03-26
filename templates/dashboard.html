@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>User Dashboard</h1>
+    <p>Start your challenge, access the APK, and submit flags in any order.</p>
+</div>
+
+{% if challenge %}
+    <div class="card">
+        <div class="card-header-row">
+            <div>
+                <h2>{{ challenge.title }}</h2>
+                <p class="muted">{{ challenge.description }}</p>
+            </div>
+            <div class="right-actions">
+                {% if session_obj and session_obj.is_started and challenge.apk_drive_link %}
+                    <a href="{{ challenge.apk_drive_link }}" target="_blank" class="btn btn-primary">Open APK Link</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-box">
+                <span class="meta-label">Duration</span>
+                <span class="meta-value">{{ challenge.duration_minutes }} mins</span>
+            </div>
+
+            <div class="meta-box">
+                <span class="meta-label">Next Unsolved Stage</span>
+                <span class="meta-value" id="nextUnsolvedStage">
+                    {% if session_obj %}
+                        {{ session_obj.current_stage }}
+                    {% else %}
+                        1
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="meta-box">
+                <span class="meta-label">Score</span>
+                <span class="meta-value" id="scoreValue">
+                    {% if session_obj %}
+                        {{ session_obj.score }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="meta-box">
+                <span class="meta-label">Solved</span>
+                <span class="meta-value"><span id="solvedCount">{{ solved|length }}</span>/9</span>
+            </div>
+        </div>
+    </div>
+
+    {% if session_obj and session_obj.is_started %}
+    <div class="card">
+        <div class="card-header-row">
+            <div>
+                <h3>Live Progress</h3>
+                <p class="muted">Your challenge progress updates instantly as you solve stages.</p>
+            </div>
+            <div class="progress-stats">
+                <span><strong id="solvedCountTop">{{ solved|length }}</strong>/9 Stages Solved</span>
+            </div>
+        </div>
+
+        <div class="progress-bar-wrap">
+            <div
+                class="progress-bar-fill"
+                id="progressBarFill"
+                data-progress="{{ (solved|length / 9 * 100)|round(0, 'floor') }}"
+            ></div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if session_obj and not session_obj.is_started %}
+        <div class="card start-card">
+            <h3>Challenge Ready</h3>
+            <p>Click start to begin your timer. The APK link will appear after the challenge starts.</p>
+            <form method="POST" action="{{ url_for('start_challenge') }}">
+                <button type="submit" class="btn btn-success">Start Challenge</button>
+            </form>
+        </div>
+    {% endif %}
+
+    {% if session_obj and session_obj.is_started %}
+        <div class="card timer-card">
+            <div class="timer-wrap">
+                <div>
+                    <h3>Challenge Timer</h3>
+                    <p class="muted">Your session timer is running. You can submit any stage in any order.</p>
+                </div>
+                <div class="timer-box-main">
+                    <span id="timer" data-seconds="{{ time_left or 0 }}">00:00:00</span>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="stage-grid" id="stageGrid">
+        {% for stage in stages %}
+            <div class="stage-card {% if stage.stage_number in solved %}stage-solved{% endif %}" id="stage-card-{{ stage.stage_number }}" data-stage="{{ stage.stage_number }}">
+                <div class="stage-top">
+                    <h3>Stage {{ stage.stage_number }}</h3>
+                    <span class="points-badge">{{ stage.points }} pts</span>
+                </div>
+
+                {% if stage.hint %}
+                    <p class="hint-text"><strong>Hint:</strong> {{ stage.hint }}</p>
+                {% else %}
+                    <p class="hint-text"><strong>Hint:</strong> No hint added.</p>
+                {% endif %}
+
+                <div class="live-message" id="live-message-{{ stage.stage_number }}"></div>
+
+                {% if stage.stage_number in solved %}
+                    <div class="status success-status" id="status-{{ stage.stage_number }}">Solved</div>
+                    <input type="text" class="form-control" value="Already solved" disabled id="input-{{ stage.stage_number }}">
+                    <button class="btn btn-disabled full-width" disabled id="btn-{{ stage.stage_number }}">Submitted</button>
+
+                {% elif session_obj and session_obj.is_started and not session_obj.is_completed %}
+                    <div class="status active-status" id="status-{{ stage.stage_number }}">Available</div>
+                    <form class="flag-form" data-stage="{{ stage.stage_number }}">
+                        <input
+                            type="text"
+                            name="flag"
+                            class="form-control"
+                            placeholder="Enter flag for Stage {{ stage.stage_number }}"
+                            required
+                            id="input-{{ stage.stage_number }}"
+                        >
+                        <button type="submit" class="btn btn-primary full-width" id="btn-{{ stage.stage_number }}">Submit Flag</button>
+                    </form>
+
+                {% elif session_obj and session_obj.is_completed %}
+                    <div class="status locked-status" id="status-{{ stage.stage_number }}">Session Completed</div>
+                    <input type="text" class="form-control" placeholder="Session ended" disabled id="input-{{ stage.stage_number }}">
+                    <button class="btn btn-disabled full-width" disabled id="btn-{{ stage.stage_number }}">Locked</button>
+
+                {% else %}
+                    <div class="status locked-status" id="status-{{ stage.stage_number }}">Start Challenge First</div>
+                    <input type="text" class="form-control" placeholder="Available after challenge starts" disabled id="input-{{ stage.stage_number }}">
+                    <button class="btn btn-disabled full-width" disabled id="btn-{{ stage.stage_number }}">Locked</button>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+{% else %}
+    <div class="card empty-card">
+        <h2>No Active Challenge</h2>
+        <p>The admin has not activated a challenge yet.</p>
+    </div>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const timerEl = document.getElementById("timer");
+    const progressBarFill = document.getElementById("progressBarFill");
+
+    if (progressBarFill) {
+        const initialProgress = parseFloat(progressBarFill.dataset.progress || "0");
+        progressBarFill.style.width = initialProgress + "%";
+    }
+
+    function formatTime(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    if (timerEl) {
+        let seconds = parseInt(timerEl.dataset.seconds || "0");
+
+        function tick() {
+            timerEl.textContent = formatTime(seconds);
+            if (seconds <= 0) {
+                clearInterval(interval);
+                setTimeout(() => window.location.reload(), 1000);
+                return;
+            }
+            seconds--;
+        }
+
+        tick();
+        const interval = setInterval(tick, 1000);
+    }
+
+    function launchConfetti() {
+        const count = 140;
+        const colors = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+
+        for (let i = 0; i < count; i++) {
+            const confetti = document.createElement("div");
+            confetti.className = "confetti-piece";
+            confetti.style.left = Math.random() * 100 + "vw";
+            confetti.style.top = "-20px";
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+            confetti.style.animationDuration = (2 + Math.random() * 2) + "s";
+            confetti.style.opacity = 1;
+            confetti.style.width = (6 + Math.random() * 8) + "px";
+            confetti.style.height = (10 + Math.random() * 14) + "px";
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 4500);
+        }
+    }
+
+    function showWarning(message) {
+        const warningPopup = document.getElementById("warningPopup");
+        const warningText = document.getElementById("warningText");
+        const mainContent = document.getElementById("mainContent");
+
+        if (warningText) warningText.textContent = message || "Something went wrong.";
+        if (warningPopup) {
+            warningPopup.classList.remove("hidden");
+            warningPopup.classList.add("show");
+
+            setTimeout(() => {
+                warningPopup.classList.remove("show");
+                setTimeout(() => warningPopup.classList.add("hidden"), 250);
+            }, 2200);
+        }
+
+        if (mainContent) {
+            mainContent.classList.remove("shake");
+            void mainContent.offsetWidth;
+            mainContent.classList.add("shake");
+        }
+    }
+
+    function showLiveMessage(stageNumber, message, type) {
+        const box = document.getElementById(`live-message-${stageNumber}`);
+        if (!box) return;
+        box.className = `live-message live-${type}`;
+        box.textContent = message;
+        box.style.display = "block";
+
+        setTimeout(() => {
+            if (box.textContent === message) {
+                box.style.display = "none";
+            }
+        }, 3000);
+    }
+
+    function pulseStageCorrect(stageNumber) {
+        const card = document.getElementById(`stage-card-${stageNumber}`);
+        if (!card) return;
+        card.classList.remove("stage-correct-pulse");
+        void card.offsetWidth;
+        card.classList.add("stage-correct-pulse");
+    }
+
+    function flashStageWrong(stageNumber) {
+        const card = document.getElementById(`stage-card-${stageNumber}`);
+        if (!card) return;
+        card.classList.remove("stage-wrong-flash");
+        void card.offsetWidth;
+        card.classList.add("stage-wrong-flash");
+    }
+
+    function updateProgressBar(solvedCountValue) {
+        const bar = document.getElementById("progressBarFill");
+        const solvedCountTop = document.getElementById("solvedCountTop");
+        if (bar) {
+            const percent = Math.max(0, Math.min(100, (solvedCountValue / 9) * 100));
+            bar.style.width = percent + "%";
+        }
+        if (solvedCountTop) {
+            solvedCountTop.textContent = solvedCountValue;
+        }
+    }
+
+    function showCompletionOverlay() {
+        const overlay = document.createElement("div");
+        overlay.className = "completion-overlay";
+        overlay.innerHTML = `
+            <div class="completion-box">
+                <h2>Challenge Completed</h2>
+                <p>You solved all 9 stages.</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        setTimeout(() => overlay.classList.add("show"), 20);
+        setTimeout(() => {
+            overlay.classList.remove("show");
+            setTimeout(() => overlay.remove(), 1200);
+        }, 2500);
+    }
+
+    function markStageSolved(stageNumber) {
+        const card = document.getElementById(`stage-card-${stageNumber}`);
+        const status = document.getElementById(`status-${stageNumber}`);
+        const input = document.getElementById(`input-${stageNumber}`);
+        const btn = document.getElementById(`btn-${stageNumber}`);
+        const form = document.querySelector(`form.flag-form[data-stage="${stageNumber}"]`);
+
+        if (card) card.classList.add("stage-solved");
+        if (status) {
+            status.className = "status success-status";
+            status.textContent = "Solved";
+        }
+        if (input) {
+            input.value = "Already solved";
+            input.disabled = true;
+        }
+        if (btn) {
+            btn.disabled = true;
+            btn.className = "btn btn-disabled full-width";
+            btn.textContent = "Submitted";
+        }
+        if (form) {
+            form.dataset.solved = "true";
+        }
+
+        pulseStageCorrect(stageNumber);
+    }
+
+    function lockAllUnsolvedStages() {
+        document.querySelectorAll(".flag-form").forEach(form => {
+            const stage = form.dataset.stage;
+            if (form.dataset.solved === "true") return;
+
+            const status = document.getElementById(`status-${stage}`);
+            const input = document.getElementById(`input-${stage}`);
+            const btn = document.getElementById(`btn-${stage}`);
+
+            if (status) {
+                status.className = "status locked-status";
+                status.textContent = "Session Completed";
+            }
+            if (input) {
+                input.disabled = true;
+                input.placeholder = "Session ended";
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.className = "btn btn-disabled full-width";
+                btn.textContent = "Locked";
+            }
+        });
+    }
+
+    document.querySelectorAll(".flag-form").forEach(form => {
+        form.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const stageNumber = this.dataset.stage;
+            const input = this.querySelector('input[name="flag"]');
+            const btn = this.querySelector('button[type="submit"]');
+            const scoreValue = document.getElementById("scoreValue");
+            const solvedCount = document.getElementById("solvedCount");
+            const nextUnsolvedStage = document.getElementById("nextUnsolvedStage");
+
+            const formData = new FormData();
+            formData.append("flag", input.value);
+
+            btn.disabled = true;
+            const oldBtnText = btn.textContent;
+            btn.textContent = "Checking...";
+
+            try {
+                const response = await fetch(`/submit-flag/${stageNumber}`, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                });
+
+                const data = await response.json();
+
+                if (typeof data.score !== "undefined" && scoreValue) {
+                    scoreValue.textContent = data.score;
+                }
+                if (typeof data.solved_count !== "undefined" && solvedCount) {
+                    solvedCount.textContent = data.solved_count;
+                    updateProgressBar(data.solved_count);
+                }
+                if (typeof data.next_unsolved_stage !== "undefined" && nextUnsolvedStage) {
+                    nextUnsolvedStage.textContent = data.next_unsolved_stage;
+                }
+
+                if (data.success) {
+                    showLiveMessage(stageNumber, data.message, "success");
+                    markStageSolved(stageNumber);
+                    launchConfetti();
+
+                    if (data.session_completed) {
+                        lockAllUnsolvedStages();
+                        showCompletionOverlay();
+                    }
+                } else {
+                    showLiveMessage(stageNumber, data.message, data.status || "danger");
+
+                    if (data.already_solved) {
+                        markStageSolved(stageNumber);
+                    } else {
+                        flashStageWrong(stageNumber);
+                        showWarning(data.message);
+                        input.focus();
+                        input.select();
+                    }
+                }
+            } catch (err) {
+                flashStageWrong(stageNumber);
+                showWarning("Submission failed. Please try again.");
+                showLiveMessage(stageNumber, "Submission failed. Please try again.", "danger");
+            } finally {
+                if (!btn.disabled || btn.textContent === "Checking...") {
+                    if (!btn.classList.contains("btn-disabled")) {
+                        btn.disabled = false;
+                        btn.textContent = oldBtnText;
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

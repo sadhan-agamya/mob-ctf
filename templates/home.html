@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-card">
+        <div class="hero-text">
+            <h1>Mobile Pentesting CTF Platform</h1>
+            <p>
+                Practice and test APK-based mobile pentesting challenges through a structured
+                stage-by-stage capture the flag platform with timer, leaderboard, and admin control.
+            </p>
+
+            <div class="hero-actions">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Go to Admin Dashboard</a>
+                    {% else %}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-success">Create Account</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Challenge Format</h3>
+        <p>9 Stages</p>
+    </div>
+    <div class="stat-card">
+        <h3>Tracking</h3>
+        <p>Per-user Timer</p>
+    </div>
+    <div class="stat-card">
+        <h3>Management</h3>
+        <p>Admin Panel</p>
+    </div>
+    <div class="stat-card">
+        <h3>Scoring</h3>
+        <p>Leaderboard</p>
+    </div>
+</div>
+
+<div class="two-col-grid">
+    <div class="card">
+        <h2>How It Works</h2>
+        <p class="muted">
+            Users register, log in, start the active challenge, and solve 9 stages one by one.
+            Each correct flag awards points and advances the user to the next stage.
+            The leaderboard ranks participants by score and progress.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>Current Active Challenge</h2>
+        {% if active_challenge %}
+            <p><strong>{{ active_challenge.title }}</strong></p>
+            <p class="muted">{{ active_challenge.description }}</p>
+            <p><strong>Duration:</strong> {{ active_challenge.duration_minutes }} minutes</p>
+            {% if active_challenge.apk_drive_link %}
+                <a href="{{ active_challenge.apk_drive_link }}" target="_blank" class="btn btn-primary">Open APK Link</a>
+            {% endif %}
+        {% else %}
+            <p class="muted">No active challenge has been configured yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

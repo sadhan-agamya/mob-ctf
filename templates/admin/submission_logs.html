@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Submission Logs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Submission Logs</h1>
+    <p>Monitor correct and incorrect stage submissions.</p>
+</div>
+
+<div class="card">
+    <form method="GET" class="filter-form">
+        <div class="filter-grid">
+            <div>
+                <label>User</label>
+                <input type="text" name="user" class="form-control" placeholder="Search username" value="{{ request.args.get('user', '') }}">
+            </div>
+            <div>
+                <label>Stage</label>
+                <input type="number" name="stage" class="form-control" placeholder="1-9" value="{{ request.args.get('stage', '') }}">
+            </div>
+            <div>
+                <label>Result</label>
+                <select name="result" class="form-control">
+                    <option value="">All</option>
+                    <option value="correct" {% if request.args.get('result') == 'correct' %}selected{% endif %}>Correct</option>
+                    <option value="wrong" {% if request.args.get('result') == 'wrong' %}selected{% endif %}>Wrong</option>
+                </select>
+            </div>
+            <div class="filter-btn-wrap">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header-row">
+        <div>
+            <h2>All Submission Logs</h2>
+        </div>
+        <div class="right-actions">
+            <a href="{{ url_for('export_csv', export_type='logs') }}" class="btn btn-primary">Export Logs CSV</a>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>User ID</th>
+                    <th>Stage</th>
+                    <th>Submitted Flag</th>
+                    <th>Result</th>
+                    <th>IP Address</th>
+                    <th>Submitted At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td>{{ log.user_id }}</td>
+                    <td>{{ log.stage_number }}</td>
+                    <td>{{ log.submitted_flag }}</td>
+                    <td>
+                        {% if log.is_correct %}
+                            <span class="badge badge-success">Correct</span>
+                        {% else %}
+                            <span class="badge badge-danger">Wrong</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.ip_address }}</td>
+                    <td>{{ log.submitted_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">No logs found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
