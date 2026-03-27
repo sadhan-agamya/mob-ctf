@@ -302,15 +302,16 @@ def login():
     if request.method == "POST":
         username_or_email = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        email_lookup = username_or_email.lower()
 
         user = User.query.filter(
-            (User.username == username_or_email) | (User.email == username_or_email)
+            (User.username == username_or_email) |
+            (User.email == email_lookup)
         ).first()
 
         if user and user.check_password(password):
             login_user(user)
             flash("Login successful.", "success")
-
             if user.is_admin:
                 return redirect(url_for("admin_dashboard"))
             return redirect(url_for("dashboard"))
